@@ -1,7 +1,7 @@
 <?php
 require_once 'config.php';
 
-$scope = 'user-read-currently-playing user-modify-playback-state user-read-recently-played user-library-read user-library-modify playlist-modify-public';
+$scope = 'user-read-currently-playing user-modify-playback-state user-read-recently-played user-library-read user-library-modify playlist-modify-public playlist-read-private playlist-read-collaborative';
 $authUrl = 'https://accounts.spotify.com/authorize?' . http_build_query([
     'response_type' => 'code',
     'client_id' => SPOTIFY_CLIENT_ID,

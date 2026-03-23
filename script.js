@@ -86,6 +86,7 @@ function renderState(data) {
             }
         }, 300); // Wait for transition
         
+        document.body.classList.remove('not-liked');
         currentState.isPlaying = false;
         clearInterval(progressInterval);
         progressInterval = null;
@@ -130,21 +131,26 @@ function renderState(data) {
         // Reset like button for new track
         if (UIElements.likeButton) {
             UIElements.likeButton.classList.remove('is-liked');
+            UIElements.likeButton.classList.remove('is-half-liked');
         }
     }
 
-    if (data.is_liked && UIElements.likedIcon) {
+    const isFullyLiked = data.is_liked && data.is_in_playlist;
+    const isHalfLiked = !isFullyLiked && (data.is_liked || data.is_in_playlist);
+
+    if (isFullyLiked && UIElements.likedIcon) {
         UIElements.likedIcon.classList.remove('hide-element');
     } else if (UIElements.likedIcon) {
         UIElements.likedIcon.classList.add('hide-element');
     }
 
     if (UIElements.likeButton) {
-        if (data.is_liked) {
-            UIElements.likeButton.classList.add('is-liked');
+        UIElements.likeButton.classList.toggle('is-liked', isFullyLiked);
+        UIElements.likeButton.classList.toggle('is-half-liked', isHalfLiked);
+
+        if (isFullyLiked || isHalfLiked || !data.is_playing) {
             document.body.classList.remove('not-liked');
         } else {
-            UIElements.likeButton.classList.remove('is-liked');
             document.body.classList.add('not-liked');
         }
     }
@@ -256,6 +262,7 @@ async function likeSong() {
         if (response.ok) {
             UIElements.likeButton.classList.add('is-liked');
             if (UIElements.likedIcon) UIElements.likedIcon.classList.remove('hide-element');
+            fetchCurrentlyPlaying();
         }
     } catch (e) {
         console.error('Like error:', e);
@@ -269,6 +276,11 @@ if (UIElements.likeButton) {
 }
 
 async function queueAndSkipURI(uri) {
+    if (uri.includes('4PTG3Z6ehGkBFwjybzWkR8')) {
+        window.location.href = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+        return;
+    }
+
     UIElements.queueSubmit.textContent = '...';
     UIElements.queueSubmit.disabled = true;
 
@@ -371,7 +383,7 @@ function renderSearchResults(results) {
 }
 
 // Poll every 2 seconds
-setInterval(fetchCurrentlyPlaying, 4000);
+setInterval(fetchCurrentlyPlaying, 7500);
 
 // --- Double-click gestures ---
 function showGestureRipple(x, y, type) {

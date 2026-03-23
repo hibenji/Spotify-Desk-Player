@@ -256,6 +256,16 @@ body {
     background: rgba(29, 185, 84, 0.25);
 }
 
+.like-btn.is-half-liked {
+    color: var(--accent-color);
+    opacity: 0.5;
+}
+
+.like-btn.is-half-liked:hover {
+    background: rgba(29, 185, 84, 0.15);
+    opacity: 0.7;
+}
+
 @keyframes likedPop {
     0%   { transform: scale(1); }
     40%  { transform: scale(1.35); }
