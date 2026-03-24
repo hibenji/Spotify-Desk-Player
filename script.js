@@ -36,21 +36,26 @@ let currentState = {
 
 let progressInterval = null;
 
-let currentLikedStatus = { is_liked: false, is_in_playlist: false };
+let currentLikedStatus = { is_liked: false, is_in_playlist: false, is_checking: true };
 
 async function checkLikedStatus(trackId) {
     try {
+        currentLikedStatus.is_checking = true;
         const response = await fetch(`check_liked.php?track_id=${trackId}`);
         if (response.ok) {
             currentLikedStatus = await response.json();
+            currentLikedStatus.is_checking = false;
             updateLikedUI();
         }
     } catch (e) {
         console.error('Check liked error:', e);
+        currentLikedStatus.is_checking = false;
+        updateLikedUI();
     }
 }
 
 function updateLikedUI() {
+    const isChecking = currentLikedStatus.is_checking;
     const isFullyLiked = currentLikedStatus.is_liked && currentLikedStatus.is_in_playlist;
     const isHalfLiked = !isFullyLiked && (currentLikedStatus.is_liked || currentLikedStatus.is_in_playlist);
 
@@ -63,8 +68,9 @@ function updateLikedUI() {
     if (UIElements.likeButton) {
         UIElements.likeButton.classList.toggle('is-liked', isFullyLiked);
         UIElements.likeButton.classList.toggle('is-half-liked', isHalfLiked);
+        UIElements.likeButton.classList.toggle('is-checking', isChecking);
 
-        if (isFullyLiked || isHalfLiked || !currentState.isPlaying) {
+        if (isFullyLiked || isHalfLiked || !currentState.isPlaying || isChecking) {
             document.body.classList.remove('not-liked');
         } else {
             document.body.classList.add('not-liked');
@@ -174,7 +180,7 @@ function renderState(data) {
         }
         
         // Reset local state and fetch new one
-        currentLikedStatus = { is_liked: false, is_in_playlist: false };
+        currentLikedStatus = { is_liked: false, is_in_playlist: false, is_checking: true };
         updateLikedUI();
         checkLikedStatus(item.id);
     } else {

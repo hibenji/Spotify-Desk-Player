@@ -2,7 +2,7 @@
     --bg-color: #0b0b0b;
     --text-primary: #ffffff;
     --text-secondary: #a7a7a7;
-    --accent-color: #1db954; 
+    --accent-color: #1db954;
     --surface-color: rgba(18, 18, 18, 0.6);
     --blur-amount: 90px;
 }
@@ -48,7 +48,8 @@ body {
     position: relative;
 }
 
-.player-container, .offline-container {
+.player-container,
+.offline-container {
     background: var(--surface-color);
     backdrop-filter: blur(25px);
     -webkit-backdrop-filter: blur(25px);
@@ -126,13 +127,29 @@ body {
     animation: bounce 1s infinite alternate;
 }
 
-.bar:nth-child(1) { animation-delay: 0s; height: 40%; }
-.bar:nth-child(2) { animation-delay: 0.3s; height: 100%; }
-.bar:nth-child(3) { animation-delay: 0.6s; height: 60%; }
+.bar:nth-child(1) {
+    animation-delay: 0s;
+    height: 40%;
+}
+
+.bar:nth-child(2) {
+    animation-delay: 0.3s;
+    height: 100%;
+}
+
+.bar:nth-child(3) {
+    animation-delay: 0.6s;
+    height: 60%;
+}
 
 @keyframes bounce {
-    0% { height: 20%; }
-    100% { height: 100%; }
+    0% {
+        height: 20%;
+    }
+
+    100% {
+        height: 100%;
+    }
 }
 
 .player-controls-wrapper {
@@ -267,10 +284,21 @@ body {
 }
 
 @keyframes likedPop {
-    0%   { transform: scale(1); }
-    40%  { transform: scale(1.35); }
-    70%  { transform: scale(0.9); }
-    100% { transform: scale(1); }
+    0% {
+        transform: scale(1);
+    }
+
+    40% {
+        transform: scale(1.35);
+    }
+
+    70% {
+        transform: scale(0.9);
+    }
+
+    100% {
+        transform: scale(1);
+    }
 }
 
 .like-btn.is-liked svg {
@@ -307,9 +335,29 @@ body {
     animation: pulse 1s infinite alternate;
 }
 
+.control-btn.is-checking {
+    position: relative;
+    pointer-events: none;
+}
+
+.control-btn.is-checking::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    border-top-color: #928181;
+    animation: spin 1s linear infinite;
+}
+
 @keyframes pulse {
-    0% { opacity: 1; }
-    100% { opacity: 0.5; }
+    0% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0.5;
+    }
 }
 
 .last-played-banner {
@@ -459,14 +507,16 @@ body {
 .spinner {
     width: 40px;
     height: 40px;
-    border: 3px solid rgba(255,255,255,0.1);
+    border: 3px solid rgba(255, 255, 255, 0.1);
     border-radius: 50%;
     border-top-color: var(--accent-color);
     animation: spin 1s ease-in-out infinite;
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* Small Screens (Portrait Phones) */
@@ -477,7 +527,8 @@ body {
         max-width: 100%;
     }
 
-    .player-container, .offline-container {
+    .player-container,
+    .offline-container {
         padding: 1.5rem 1.25rem;
         border-radius: 24px;
     }
@@ -636,9 +687,20 @@ body.not-liked::after {
 }
 
 @keyframes borderPulse {
-    0%   { border-color: rgba(220, 50, 50, 0.5);  box-shadow: inset 0 0 25px rgba(220, 50, 50, 0.15); }
-    50%  { border-color: rgba(220, 50, 50, 1);    box-shadow: inset 0 0 55px rgba(220, 50, 50, 0.4); }
-    100% { border-color: rgba(220, 50, 50, 0.5);  box-shadow: inset 0 0 25px rgba(220, 50, 50, 0.15); }
+    0% {
+        border-color: rgba(220, 50, 50, 0.5);
+        box-shadow: inset 0 0 25px rgba(220, 50, 50, 0.15);
+    }
+
+    50% {
+        border-color: rgba(220, 50, 50, 1);
+        box-shadow: inset 0 0 55px rgba(220, 50, 50, 0.4);
+    }
+
+    100% {
+        border-color: rgba(220, 50, 50, 0.5);
+        box-shadow: inset 0 0 25px rgba(220, 50, 50, 0.15);
+    }
 }
 
 .gesture-ripple {
@@ -666,7 +728,18 @@ body.not-liked::after {
 }
 
 @keyframes gestureRipple {
-    0%   { transform: translate(-50%, -50%) scale(0);   opacity: 1; }
-    60%  { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
-    100% { transform: translate(-50%, -50%) scale(1.4); opacity: 0; }
+    0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 1;
+    }
+
+    60% {
+        transform: translate(-50%, -50%) scale(1.1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(-50%, -50%) scale(1.4);
+        opacity: 0;
+    }
 }
