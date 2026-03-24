@@ -1,3 +1,4 @@
 .env
 token.json
 playlist_cache.json
+liked_cache.json

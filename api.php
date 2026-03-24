@@ -103,15 +103,12 @@ function getPlaylistTrackIds($playlistId, $accessToken) {
     $offset = 0;
     $limit = 100;
     do {
-        $ch = curl_init('https://api.spotify.com/v1/playlists/' . $playlistId . '/tracks?fields=items(track(id)),next&limit=' . $limit . '&offset=' . $offset);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $accessToken]);
-        $resp = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        $respData = spotifyApiRequest('https://api.spotify.com/v1/playlists/' . $playlistId . '/tracks?fields=items(track(id)),next&limit=' . $limit . '&offset=' . $offset, $accessToken, 'GET');
+        $httpCode = $respData['code'];
+        $respBody = $respData['body'];
 
-        if ($httpCode === 429) {
-            // Rate limited — return stale cache if available, otherwise empty
+        if ($httpCode !== 200) {
+            // Rate limited or error — return stale cache if available, otherwise empty
             if (file_exists($cacheFile)) {
                 $stale = json_decode(file_get_contents($cacheFile), true);
                 return $stale['track_ids'] ?? [];
@@ -119,7 +116,7 @@ function getPlaylistTrackIds($playlistId, $accessToken) {
             return [];
         }
 
-        $data = json_decode($resp, true);
+        $data = json_decode($respBody, true);
         if (!empty($data['items'])) {
             foreach ($data['items'] as $item) {
                 if (isset($item['track']['id'])) {
@@ -148,18 +145,75 @@ function invalidatePlaylistCache() {
     }
 }
 
+function getLikedTrackIds($accessToken) {
+    $cacheFile = __DIR__ . '/liked_cache.json';
+    $cacheTTL = 30; // seconds
+
+    // Check cache
+    if (file_exists($cacheFile)) {
+        $cache = json_decode(file_get_contents($cacheFile), true);
+        if (
+            is_array($cache) &&
+            isset($cache['timestamp'], $cache['track_ids']) &&
+            (time() - $cache['timestamp']) < $cacheTTL
+        ) {
+            return $cache['track_ids'];
+        }
+    }
+
+    // Fetch all track IDs from liked songs
+    $trackIds = [];
+    $offset = 0;
+    $limit = 50;
+    do {
+        $respData = spotifyApiRequest('https://api.spotify.com/v1/me/tracks?limit=' . $limit . '&offset=' . $offset, $accessToken, 'GET');
+        $httpCode = $respData['code'];
+        $respBody = $respData['body'];
+
+        if ($httpCode !== 200) {
+            // Rate limited or error — return stale cache if available, otherwise empty
+            if (file_exists($cacheFile)) {
+                $stale = json_decode(file_get_contents($cacheFile), true);
+                return $stale['track_ids'] ?? [];
+            }
+            return [];
+        }
+
+        $data = json_decode($respBody, true);
+        if (!empty($data['items'])) {
+            foreach ($data['items'] as $item) {
+                if (isset($item['track']['id'])) {
+                    $trackIds[] = $item['track']['id'];
+                }
+            }
+        }
+        $offset += $limit;
+        $hasMore = !empty($data['next']);
+    } while ($hasMore);
+
+    // Save cache
+    file_put_contents($cacheFile, json_encode([
+        'timestamp' => time(),
+        'track_ids' => $trackIds
+    ]));
+
+    return $trackIds;
+}
+
+function invalidateLikedCache() {
+    $cacheFile = __DIR__ . '/liked_cache.json';
+    if (file_exists($cacheFile)) {
+        unlink($cacheFile);
+    }
+}
+
 function getTrackLikedStatus($trackId, $accessToken) {
     $result = ['is_liked' => false, 'is_in_playlist' => false];
     if (!$trackId) return $result;
 
     // Check liked songs
-    $chLiked = curl_init('https://api.spotify.com/v1/me/tracks/contains?ids=' . urlencode($trackId));
-    curl_setopt($chLiked, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($chLiked, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $accessToken]);
-    $likedResp = curl_exec($chLiked);
-    curl_close($chLiked);
-    $likedData = json_decode($likedResp, true);
-    $result['is_liked'] = is_array($likedData) && isset($likedData[0]) && $likedData[0];
+    $likedTrackIds = getLikedTrackIds($accessToken);
+    $result['is_liked'] = in_array($trackId, $likedTrackIds, true);
 
     // Check the configured playlist using cache
     $playlistId = LIKE_PLAYLIST_ID;
@@ -203,6 +257,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['ac
         echo json_encode(['error' => 'Failed to like song', 'code' => $likeResult['code']]);
         exit;
     }
+
+    invalidateLikedCache();
 
     // Always add to the configured playlist (with retry on rate limit)
     $playlistId = LIKE_PLAYLIST_ID;

@@ -36,6 +36,42 @@ let currentState = {
 
 let progressInterval = null;
 
+let currentLikedStatus = { is_liked: false, is_in_playlist: false };
+
+async function checkLikedStatus(trackId) {
+    try {
+        const response = await fetch(`check_liked.php?track_id=${trackId}`);
+        if (response.ok) {
+            currentLikedStatus = await response.json();
+            updateLikedUI();
+        }
+    } catch (e) {
+        console.error('Check liked error:', e);
+    }
+}
+
+function updateLikedUI() {
+    const isFullyLiked = currentLikedStatus.is_liked && currentLikedStatus.is_in_playlist;
+    const isHalfLiked = !isFullyLiked && (currentLikedStatus.is_liked || currentLikedStatus.is_in_playlist);
+
+    if (isFullyLiked && UIElements.likedIcon) {
+        UIElements.likedIcon.classList.remove('hide-element');
+    } else if (UIElements.likedIcon) {
+        UIElements.likedIcon.classList.add('hide-element');
+    }
+
+    if (UIElements.likeButton) {
+        UIElements.likeButton.classList.toggle('is-liked', isFullyLiked);
+        UIElements.likeButton.classList.toggle('is-half-liked', isHalfLiked);
+
+        if (isFullyLiked || isHalfLiked || !currentState.isPlaying) {
+            document.body.classList.remove('not-liked');
+        } else {
+            document.body.classList.add('not-liked');
+        }
+    }
+}
+
 function formatTime(ms) {
     const totalSeconds = Math.floor(ms / 1000);
     const minutes = Math.floor(totalSeconds / 60);
@@ -106,6 +142,9 @@ function renderState(data) {
         }
     }, UIElements.offline.classList.contains('hidden') ? 0 : 300);
 
+    // Always update progress state FIRST so updateLikedUI uses current playing status correctly
+    currentState.isPlaying = data.is_playing;
+
     // Update track metadata if it changed
     if (currentState.id !== item.id) {
         currentState.id = item.id;
@@ -128,35 +167,19 @@ function renderState(data) {
         
         document.title = `${item.name} - ${item.artists[0]?.name}`;
 
-        // Reset like button for new track
+        // Reset like button for new track visually immediately before fetch completes
         if (UIElements.likeButton) {
             UIElements.likeButton.classList.remove('is-liked');
             UIElements.likeButton.classList.remove('is-half-liked');
         }
+        
+        // Reset local state and fetch new one
+        currentLikedStatus = { is_liked: false, is_in_playlist: false };
+        updateLikedUI();
+        checkLikedStatus(item.id);
+    } else {
+        updateLikedUI();
     }
-
-    const isFullyLiked = data.is_liked && data.is_in_playlist;
-    const isHalfLiked = !isFullyLiked && (data.is_liked || data.is_in_playlist);
-
-    if (isFullyLiked && UIElements.likedIcon) {
-        UIElements.likedIcon.classList.remove('hide-element');
-    } else if (UIElements.likedIcon) {
-        UIElements.likedIcon.classList.add('hide-element');
-    }
-
-    if (UIElements.likeButton) {
-        UIElements.likeButton.classList.toggle('is-liked', isFullyLiked);
-        UIElements.likeButton.classList.toggle('is-half-liked', isHalfLiked);
-
-        if (isFullyLiked || isHalfLiked || !data.is_playing) {
-            document.body.classList.remove('not-liked');
-        } else {
-            document.body.classList.add('not-liked');
-        }
-    }
-
-    // Always update progress state
-    currentState.isPlaying = data.is_playing;
 
     if (currentState.isPlaying) {
         UIElements.player.classList.add('is-playing');
@@ -202,7 +225,7 @@ function renderState(data) {
 
 async function fetchCurrentlyPlaying() {
     try {
-        const response = await fetch('api.php');
+        const response = await fetch('current.php');
         if (!response.ok) {
             renderState({ is_playing: false });
             return;
@@ -232,7 +255,7 @@ async function skipSong() {
     
     UIElements.skipButton.classList.add('is-loading');
     try {
-        const response = await fetch('api.php?action=next', { method: 'POST' });
+        const response = await fetch('skip.php', { method: 'POST' });
         if (response.ok) {
             // Eagerly fetch next track
             setTimeout(fetchCurrentlyPlaying, 500);
@@ -258,11 +281,11 @@ async function likeSong() {
     try {
         const formData = new FormData();
         formData.append('track_id', currentTrackId);
-        const response = await fetch('api.php?action=like', { method: 'POST', body: formData });
+        const response = await fetch('like.php', { method: 'POST', body: formData });
         if (response.ok) {
             UIElements.likeButton.classList.add('is-liked');
             if (UIElements.likedIcon) UIElements.likedIcon.classList.remove('hide-element');
-            fetchCurrentlyPlaying();
+            checkLikedStatus(currentTrackId);
         }
     } catch (e) {
         console.error('Like error:', e);
@@ -287,7 +310,7 @@ async function queueAndSkipURI(uri) {
     try {
         const formData = new FormData();
         formData.append('uri', uri);
-        const response = await fetch('api.php?action=queue_and_skip', {
+        const response = await fetch('queue_and_skip.php', {
             method: 'POST',
             body: formData
         });
@@ -320,7 +343,7 @@ if (UIElements.queueForm) {
 
         searchTimeout = setTimeout(async () => {
             try {
-                const response = await fetch(`api.php?action=search&q=${encodeURIComponent(query)}`);
+                const response = await fetch(`search.php?q=${encodeURIComponent(query)}`);
                 if (response.ok) {
                     const results = await response.json();
                     renderSearchResults(results);
