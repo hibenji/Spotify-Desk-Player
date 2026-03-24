@@ -107,7 +107,7 @@ function getPlaylistTrackIds($playlistId, $accessToken) {
     $offset = 0;
     $limit = 50;
     do {
-        $respData = spotifyApiRequest('https://api.spotify.com/v1/playlists/' . $playlistId . '/items?fields=items(track(id)),next&limit=' . $limit . '&offset=' . $offset, $accessToken, 'GET');
+        $respData = spotifyApiRequest('https://api.spotify.com/v1/playlists/' . $playlistId . '/items?fields=items(item(id)),next&limit=' . $limit . '&offset=' . $offset, $accessToken, 'GET');
         $httpCode = $respData['code'];
         $respBody = $respData['body'];
 
@@ -122,8 +122,8 @@ function getPlaylistTrackIds($playlistId, $accessToken) {
         $data = json_decode($respBody, true);
         if (!empty($data['items'])) {
             foreach ($data['items'] as $item) {
-                if (isset($item['track']['id'])) {
-                    $trackIds[] = $item['track']['id'];
+                if (isset($item['item']['id'])) {
+                    $trackIds[] = $item['item']['id'];
                 }
             }
         }

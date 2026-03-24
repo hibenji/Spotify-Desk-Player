@@ -107,7 +107,7 @@ function getPlaylistTrackIds($playlistId, $accessToken) {
     $offset = 0;
     $limit = 100;
     do {
-        $respData = spotifyApiRequest('https://api.spotify.com/v1/playlists/' . $playlistId . '/items?fields=items(track(id)),next&limit=' . $limit . '&offset=' . $offset, $accessToken, 'GET');
+        $respData = spotifyApiRequest('https://api.spotify.com/v1/playlists/' . $playlistId . '/items?fields=items(item(id)),next&limit=' . $limit . '&offset=' . $offset, $accessToken, 'GET');
         $httpCode = $respData['code'];
         $respBody = $respData['body'];
 
@@ -122,8 +122,8 @@ function getPlaylistTrackIds($playlistId, $accessToken) {
         $data = json_decode($respBody, true);
         if (!empty($data['items'])) {
             foreach ($data['items'] as $item) {
-                if (isset($item['track']['id'])) {
-                    $trackIds[] = $item['track']['id'];
+                if (isset($item['item']['id'])) {
+                    $trackIds[] = $item['item']['id'];
                 }
             }
         }
@@ -141,19 +141,7 @@ function getPlaylistTrackIds($playlistId, $accessToken) {
     return $trackIds;
 }
 
-function invalidatePlaylistCache() {
-    $cacheFile = __DIR__ . '/playlist_cache.json';
-    if (file_exists($cacheFile)) {
-        unlink($cacheFile);
-    }
-}
 
-function invalidateLikedCache() {
-    $cacheFile = __DIR__ . '/liked_cache.json';
-    if (file_exists($cacheFile)) {
-        unlink($cacheFile);
-    }
-}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -181,7 +169,7 @@ if ($likeResult['code'] !== 200 && $likeResult['code'] !== 201 && $likeResult['c
     exit;
 }
 
-invalidateLikedCache();
+
 
 // Always add to the configured playlist (with retry on rate limit)
 $playlistId = LIKE_PLAYLIST_ID;
@@ -195,8 +183,14 @@ if ($playlistId) {
             ['uris' => ['spotify:track:' . $trackId]]
         );
         
-        // Invalidate cache so next poll sees the new track
-        invalidatePlaylistCache();
+        // Update cache to include the new track immediately avoiding eventual consistency
+        $cacheFile = __DIR__ . '/playlist_cache.json';
+        $playlistTrackIds[] = $trackId;
+        file_put_contents($cacheFile, json_encode([
+            'playlist_id' => $playlistId,
+            'timestamp' => time(),
+            'track_ids' => $playlistTrackIds
+        ]));
     }
 }
 
